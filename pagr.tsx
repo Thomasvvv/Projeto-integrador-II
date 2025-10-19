@@ -7,13 +7,20 @@ import { Check, X, SkipForward } from "lucide-react"
 import Link from "next/link"
 
 export default function AvaliacaoInicial() {
-  const [etapa, setEtapa] = useState<"video" | "resultado">("video")
+  const [etapa, setEtapa] = useState<"video" | "verificacao-nome" | "resultado">("video")
   const [respostas, setRespostas] = useState<boolean[]>([])
   const [perguntaAtual, setPerguntaAtual] = useState(0)
   const [videoPausado, setVideoPausado] = useState(false)
+  const [nomeDigitado, setNomeDigitado] = useState("")
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const temposPausa = [10, 20, 30, 40]
+  const temposPausa = [15, 30, 45]
+
+  const perguntas = [
+    "Pergunta 1: Você sabe o alfabeto completo, do A ao Z?",
+    "Pergunta 2: Se eu disser um nome, como 'Mãe' ou 'Casa', você consegue identificar a primeira letra dessa palavra?",
+    "Pergunta 3: Você consegue escrever seu próprio nome sem precisar copiar de lugar nenhum?",
+  ]
 
   useEffect(() => {
     if (videoRef.current) {
@@ -46,6 +53,20 @@ export default function AvaliacaoInicial() {
     const novasRespostas = [...respostas, resposta]
     setRespostas(novasRespostas)
 
+    if (perguntaAtual === 2 && resposta === true) {
+      setEtapa("verificacao-nome")
+      return
+    }
+
+    if (perguntaAtual === 2 && resposta === false) {
+      // Avisar que não tem problema e pedir ajuda
+      falar("Não tem problema, peça ajuda para alguém para escrever o seu nome na próxima etapa")
+      setTimeout(() => {
+        setEtapa("verificacao-nome")
+      }, 5000) // Esperar 5 segundos para a mensagem ser ouvida
+      return
+    }
+
     if (perguntaAtual < temposPausa.length - 1) {
       setPerguntaAtual(perguntaAtual + 1)
       setVideoPausado(false)
@@ -55,29 +76,97 @@ export default function AvaliacaoInicial() {
     }
   }
 
+  const falar = (texto: string) => {
+    if ("speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(texto)
+      utterance.lang = "pt-BR"
+      utterance.rate = 0.6
+      utterance.pitch = 1.1
+      window.speechSynthesis.speak(utterance)
+    }
+  }
+
   const pularVideo = () => {
     window.location.href = "/alfabeto"
   }
 
-  const calcularNivel = () => {
-    const acertos = respostas.filter((r) => r).length
-    const percentual = (acertos / respostas.length) * 100
-
-    if (percentual <= 50) {
+  const calcularProximaRota = () => {
+    // Se respondeu SIM para perguntas 1 e 2 (sabe alfabeto e identifica letras)
+    if (respostas[0] === true && respostas[1] === true) {
       return {
-        nivel: "iniciante",
-        titulo: "Vamos começar do início!",
-        descricao: "Você vai aprender o alfabeto com atividades práticas e divertidas.",
-        proximaRota: "/alfabeto",
-      }
-    } else {
-      return {
-        nivel: "intermediario",
-        titulo: "Você já sabe algumas coisas!",
+        titulo: "Você já conhece o alfabeto!",
         descricao: "Vamos praticar a leitura e escrita de palavras e frases.",
         proximaRota: "/leitura",
       }
     }
+
+    // Se não sabe o alfabeto, começar do início
+    return {
+      titulo: "Vamos começar do início!",
+      descricao: "Você vai aprender o alfabeto com atividades práticas e divertidas.",
+      proximaRota: "/alfabeto",
+    }
+  }
+
+  const verificarNome = () => {
+    if (nomeDigitado.trim().length >= 2) {
+      // Nome válido, salvar no localStorage para usar no desafio final
+      localStorage.setItem("nomeAluno", nomeDigitado.trim())
+      setEtapa("resultado")
+    } else {
+      alert("Por favor, digite seu nome completo")
+    }
+  }
+
+  if (etapa === "verificacao-nome") {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400">
+        <Card className="w-full max-w-4xl p-8 md:p-12 shadow-2xl bg-white/95 backdrop-blur">
+          <div className="space-y-8">
+            <div className="text-center space-y-4">
+              <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-balance">
+                Ótimo! Vamos verificar
+              </h1>
+              <p className="text-2xl md:text-3xl text-gray-700 text-balance">
+                Por favor, escreva seu nome completo abaixo:
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <input
+                type="text"
+                value={nomeDigitado}
+                onChange={(e) => setNomeDigitado(e.target.value)}
+                placeholder="Digite seu nome aqui..."
+                className="w-full px-8 py-8 text-3xl md:text-4xl font-bold text-center border-4 border-purple-300 rounded-2xl focus:outline-none focus:border-purple-500 focus:ring-4 focus:ring-purple-200 transition-all bg-white"
+                autoFocus
+              />
+
+              <Button
+                onClick={verificarNome}
+                size="lg"
+                className="w-full py-10 text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-2xl shadow-lg transform hover:scale-105 transition-all"
+              >
+                <Check className="w-10 h-10 mr-3" />
+                Confirmar
+              </Button>
+
+              <Button
+                onClick={() => {
+                  setRespostas([...respostas.slice(0, 2), false])
+                  setEtapa("resultado")
+                }}
+                variant="outline"
+                size="lg"
+                className="w-full py-8 text-xl font-semibold border-2 border-gray-300 hover:bg-gray-100"
+              >
+                Na verdade, ainda preciso praticar
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    )
   }
 
   if (etapa === "video") {
@@ -133,8 +222,8 @@ export default function AvaliacaoInicial() {
 
             {videoPausado && (
               <div className="space-y-4">
-                <p className="text-center text-xl md:text-2xl font-semibold text-gray-800">
-                  Responda a pergunta que acabou de ouvir:
+                <p className="text-center text-xl md:text-2xl font-semibold text-gray-800 text-balance">
+                  {perguntas[perguntaAtual]}
                 </p>
                 <div className="grid md:grid-cols-2 gap-6">
                   <Button
@@ -168,7 +257,7 @@ export default function AvaliacaoInicial() {
     )
   }
 
-  const resultado = calcularNivel()
+  const resultado = calcularProximaRota()
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400">
@@ -184,12 +273,6 @@ export default function AvaliacaoInicial() {
             <p className="text-2xl md:text-3xl text-gray-700 text-balance">{resultado.descricao}</p>
           </div>
 
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 p-8 rounded-2xl border-2 border-purple-200 space-y-4">
-            <p className="text-xl text-gray-700">
-              Você respondeu {respostas.filter((r) => r).length} de {respostas.length} perguntas com "Sim"
-            </p>
-          </div>
-
           <Link href={resultado.proximaRota}>
             <Button
               size="lg"
@@ -203,3 +286,4 @@ export default function AvaliacaoInicial() {
     </div>
   )
 }
+

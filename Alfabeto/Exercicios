@@ -8,29 +8,29 @@ import Link from "next/link"
 
 const alfabeto = [
   { letra: "A", palavra: "AVIÃO", imagem: "✈️" },
-  { letra: "B", palavra: "BOLA", imagem: "⚽" },
-  { letra: "C", palavra: "CASA", imagem: "🏠" },
-  { letra: "D", palavra: "DADO", imagem: "🎲" },
-  { letra: "E", palavra: "ELEFANTE", imagem: "🐘" },
-  { letra: "F", palavra: "FLOR", imagem: "🌸" },
-  { letra: "G", palavra: "GATO", imagem: "🐱" },
-  { letra: "H", palavra: "HOTEL", imagem: "🏨" },
+  { letra: "B", palavra: "BOLO", imagem: "🍰" },
+  { letra: "C", palavra: "CAFÉ", imagem: "☕" },
+  { letra: "D", palavra: "DEDO", imagem: "👆" },
+  { letra: "E", palavra: "ESTRELA", imagem: "⭐" },
+  { letra: "F", palavra: "FACA", imagem: "🔪" },
+  { letra: "G", palavra: "GARFO", imagem: "🍴" },
+  { letra: "H", palavra: "HORA", imagem: "⏰" },
   { letra: "I", palavra: "IGREJA", imagem: "⛪" },
   { letra: "J", palavra: "JANELA", imagem: "🪟" },
   { letra: "K", palavra: "KIWI", imagem: "🥝" },
-  { letra: "L", palavra: "LIVRO", imagem: "📚" },
-  { letra: "M", palavra: "MAÇÃ", imagem: "🍎" },
-  { letra: "N", palavra: "NAVIO", imagem: "🚢" },
-  { letra: "O", palavra: "OVO", imagem: "🥚" },
-  { letra: "P", palavra: "PATO", imagem: "🦆" },
+  { letra: "L", palavra: "LUA", imagem: "🌙" },
+  { letra: "M", palavra: "MÃO", imagem: "✋" },
+  { letra: "N", palavra: "NETO", imagem: "👶" },
+  { letra: "O", palavra: "ÓCULOS", imagem: "👓" },
+  { letra: "P", palavra: "PALITO", imagem: "🥢" },
   { letra: "Q", palavra: "QUEIJO", imagem: "🧀" },
-  { letra: "R", palavra: "RATO", imagem: "🐭" },
-  { letra: "S", palavra: "SOL", imagem: "☀️" },
-  { letra: "T", palavra: "TREM", imagem: "🚂" },
+  { letra: "R", palavra: "REMÉDIO", imagem: "💊" },
+  { letra: "S", palavra: "SAPATO", imagem: "👞" },
+  { letra: "T", palavra: "TELEFONE", imagem: "📞" },
   { letra: "U", palavra: "UVA", imagem: "🍇" },
-  { letra: "V", palavra: "VACA", imagem: "🐄" },
+  { letra: "V", palavra: "VELA", imagem: "🕯️" },
   { letra: "W", palavra: "WI-FI", imagem: "📶" },
-  { letra: "X", palavra: "XÍCARA", imagem: "☕" },
+  { letra: "X", palavra: "XALE", imagem: "🧣" },
   { letra: "Y", palavra: "YOGA", imagem: "🧘" },
   { letra: "Z", palavra: "ZEBRA", imagem: "🦓" },
 ]
@@ -43,6 +43,7 @@ export default function ExerciciosAlfabeto() {
   const [acertos, setAcertos] = useState(0)
   const [concluido, setConcluido] = useState(false)
   const [fase, setFase] = useState<"normal" | "avancado">("normal")
+  const [letrasUsadas, setLetrasUsadas] = useState<Set<string>>(new Set())
 
   const totalExercicios = 10
 
@@ -51,7 +52,18 @@ export default function ExerciciosAlfabeto() {
   }, [])
 
   const gerarNovoExercicio = () => {
-    const letraCorreta = alfabeto[Math.floor(Math.random() * alfabeto.length)]
+    const letrasDisponiveis = alfabeto.filter((item) => !letrasUsadas.has(item.letra))
+
+    // Se não houver letras disponíveis, resetar (não deveria acontecer com 26 letras e 10 exercícios)
+    if (letrasDisponiveis.length === 0) {
+      setLetrasUsadas(new Set())
+      return gerarNovoExercicio()
+    }
+
+    const letraCorreta = letrasDisponiveis[Math.floor(Math.random() * letrasDisponiveis.length)]
+
+    setLetrasUsadas((prev) => new Set(prev).add(letraCorreta.letra))
+
     const opcoesExercicio = [letraCorreta]
     const indicesUsados = new Set([alfabeto.indexOf(letraCorreta)])
 
@@ -88,6 +100,7 @@ export default function ExerciciosAlfabeto() {
         setExercicioAtual(0)
         setAcertos(0)
         setConcluido(false)
+        setLetrasUsadas(new Set())
         gerarNovoExercicio()
       } else {
         setConcluido(true)

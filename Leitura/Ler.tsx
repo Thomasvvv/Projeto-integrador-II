@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check, X, Volume2, ArrowRight, Home } from "lucide-react"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 const licoes = [
   {
@@ -14,7 +15,7 @@ const licoes = [
       { palavra: "BOLA", silabas: ["BO", "LA"], imagem: "⚽" },
       { palavra: "GATO", silabas: ["GA", "TO"], imagem: "🐱" },
       { palavra: "PATO", silabas: ["PA", "TO"], imagem: "🦆" },
-      { palavra: "FLOR", silabas: ["FLOR"], imagem: "🌸" },
+      { palavra: "SAPO", silabas: ["SA", "PO"], imagem: "🐸" },
     ],
   },
   {
@@ -44,7 +45,17 @@ const licoes = [
   },
 ]
 
+function embaralharArray<T>(array: T[]): T[] {
+  const novoArray = [...array]
+  for (let i = novoArray.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[novoArray[i], novoArray[j]] = [novoArray[j], novoArray[i]]
+  }
+  return novoArray
+}
+
 export default function AprendizadoLeitura() {
+  const router = useRouter()
   const [licaoAtual, setLicaoAtual] = useState(0)
   const [itemAtual, setItemAtual] = useState(0)
   const [modo, setModo] = useState<"ler" | "exercicio">("ler")
@@ -68,38 +79,209 @@ export default function AprendizadoLeitura() {
 
   const falarSilaba = (silaba: string) => {
     if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(silaba)
+      const mapeamentoFonetico: { [key: string]: string } = {
+        BA: "bá",
+        BE: "bé",
+        BI: "bí",
+        BO: "bó",
+        BU: "bú",
+        CA: "cá",
+        CE: "cé",
+        CI: "cí",
+        CO: "có",
+        CU: "cú",
+        DA: "dá",
+        DE: "dé",
+        DI: "dí",
+        DO: "dó",
+        DU: "dú",
+        FA: "fá",
+        FE: "fé",
+        FI: "fí",
+        FO: "fó",
+        FU: "fú",
+        GA: "gá",
+        GE: "gué",
+        GI: "guí",
+        GO: "gó",
+        GU: "gú",
+        JA: "já",
+        JE: "jé",
+        JI: "jí",
+        JO: "jó",
+        JU: "jú",
+        LA: "lá",
+        LE: "lé",
+        LI: "lí",
+        LO: "ló",
+        LU: "lú",
+        MA: "má",
+        ME: "mé",
+        MI: "mí",
+        MO: "mó",
+        MU: "mú",
+        NA: "ná",
+        NE: "né",
+        NI: "ní",
+        NO: "nó",
+        NU: "nú",
+        PA: "pá",
+        PE: "pé",
+        PI: "pí",
+        PO: "pó",
+        PU: "pú",
+        RA: "rá",
+        RE: "ré",
+        RI: "rí",
+        RO: "ró",
+        RU: "rú",
+        SA: "sá",
+        SE: "sé",
+        SI: "sí",
+        SO: "só",
+        SU: "sú",
+        TA: "tá",
+        TE: "té",
+        TI: "tí",
+        TO: "tó",
+        TU: "tú",
+        VA: "vá",
+        VE: "vé",
+        VI: "ví",
+        VO: "vó",
+        VU: "vú",
+        ZA: "zá",
+        ZE: "zé",
+        ZI: "zí",
+        ZO: "zó",
+        ZU: "zú",
+      }
+
+      // Usa o mapeamento fonético ou a sílaba original em minúsculas
+      const silabaFonetica = mapeamentoFonetico[silaba] || silaba.toLowerCase()
+
+      const utterance = new SpeechSynthesisUtterance(silabaFonetica)
       utterance.lang = "pt-BR"
-      utterance.rate = 0.6
+      utterance.rate = 0.8 // Taxa mais natural
+      utterance.pitch = 1.0 // Tom normal
+      utterance.volume = 1.0 // Volume máximo
       window.speechSynthesis.speak(utterance)
     }
   }
 
   const falarPalavra = (palavra: string) => {
     if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(palavra)
+      const utterance = new SpeechSynthesisUtterance(palavra.toLowerCase())
       utterance.lang = "pt-BR"
-      utterance.rate = 0.7
+      utterance.rate = 0.6 // Taxa mais lenta para melhor compreensão
+      utterance.pitch = 1.1 // Tom ligeiramente mais alto
       window.speechSynthesis.speak(utterance)
     }
+  }
+
+  const prepararExercicio = (palavra: { palavra: string; silabas: string[]; imagem: string }) => {
+    const silabasCorretas = [...palavra.silabas]
+
+    console.log("[v0] Palavra:", palavra.palavra)
+    console.log("[v0] Sílabas corretas:", silabasCorretas)
+
+    const todasSilabasDisponiveis = [
+      "BA",
+      "BE",
+      "BI",
+      "BO",
+      "BU",
+      "CA",
+      "CE",
+      "CI",
+      "CO",
+      "CU",
+      "DA",
+      "DE",
+      "DI",
+      "DO",
+      "DU",
+      "FA",
+      "FE",
+      "FI",
+      "FO",
+      "FU",
+      "GA",
+      "GE",
+      "GI",
+      "GO",
+      "GU",
+      "JA",
+      "JE",
+      "JI",
+      "JO",
+      "JU",
+      "LA",
+      "LE",
+      "LI",
+      "LO",
+      "LU",
+      "MA",
+      "ME",
+      "MI",
+      "MO",
+      "MU",
+      "NA",
+      "NE",
+      "NI",
+      "NO",
+      "NU",
+      "PA",
+      "PE",
+      "PI",
+      "PO",
+      "PU",
+      "RA",
+      "RE",
+      "RI",
+      "RO",
+      "RU",
+      "SA",
+      "SE",
+      "SI",
+      "SO",
+      "SU",
+      "TA",
+      "TE",
+      "TI",
+      "TO",
+      "TU",
+      "VA",
+      "VE",
+      "VI",
+      "VO",
+      "VU",
+      "ZA",
+      "ZE",
+      "ZI",
+      "ZO",
+      "ZU",
+    ]
+
+    const distratoras = embaralharArray(todasSilabasDisponiveis.filter((s) => !silabasCorretas.includes(s))).slice(0, 6)
+
+    const todasSilabas = embaralharArray([...silabasCorretas, ...distratoras])
+
+    console.log("[v0] Sílabas embaralhadas:", todasSilabas)
+    console.log(
+      "[v0] Contém todas as corretas?",
+      silabasCorretas.every((s) => todasSilabas.includes(s)),
+    )
+
+    setSilabasEmbaralhadas(todasSilabas)
+    setSilabasSelecionadas([])
+    setFeedback(null)
   }
 
   const iniciarExercicio = () => {
     if (licao.palavras) {
       const palavra = licao.palavras[itemAtual]
-      const silabasCorretas = [...palavra.silabas]
-
-      // Adicionar sílabas distratoras
-      const silabasDistratoras = ["MA", "TA", "LA", "RA", "NA", "PE", "TE", "ME", "NE", "SE"]
-      const distratoras = silabasDistratoras
-        .filter((s) => !silabasCorretas.includes(s))
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 3)
-
-      const todasSilabas = [...silabasCorretas, ...distratoras].sort(() => Math.random() - 0.5)
-      setSilabasEmbaralhadas(todasSilabas)
-      setSilabasSelecionadas([])
-      setFeedback(null)
+      prepararExercicio(palavra)
       setModo("exercicio")
     }
   }
@@ -139,14 +321,22 @@ export default function AprendizadoLeitura() {
   const proximoItem = () => {
     if (itemAtual < totalItens - 1) {
       setItemAtual(itemAtual + 1)
-      setModo("ler")
       setFeedback(null)
       setRespostaUsuario("")
       setSilabasSelecionadas([])
+
+      if (modo === "exercicio" && licao.palavras) {
+        const proximaPalavra = licao.palavras[itemAtual + 1]
+        prepararExercicio(proximaPalavra)
+      }
     } else {
       if (licao.palavras && modo === "ler") {
         setItemAtual(0)
-        iniciarExercicio()
+        setModo("exercicio")
+        const primeiraPalavra = licao.palavras[0]
+        prepararExercicio(primeiraPalavra)
+      } else if (licao.palavras && modo === "exercicio") {
+        router.push("/nome")
       } else if (licaoAtual < licoes.length - 1) {
         setLicaoAtual(licaoAtual + 1)
         setItemAtual(0)
@@ -154,6 +344,8 @@ export default function AprendizadoLeitura() {
         setFeedback(null)
         setRespostaUsuario("")
         setSilabasSelecionadas([])
+      } else {
+        router.push("/nome")
       }
     }
   }
@@ -171,7 +363,6 @@ export default function AprendizadoLeitura() {
 
             <div className="text-9xl">{palavra.imagem}</div>
 
-            {/* Área de resposta */}
             <div className="bg-gradient-to-r from-purple-100 to-pink-100 p-8 rounded-2xl border-4 border-purple-300 min-h-[120px] flex items-center justify-center">
               {silabasSelecionadas.length > 0 ? (
                 <div className="flex gap-2 flex-wrap justify-center">
@@ -186,19 +377,29 @@ export default function AprendizadoLeitura() {
               )}
             </div>
 
-            {/* Botão para remover última sílaba */}
-            {silabasSelecionadas.length > 0 && (
-              <Button
-                onClick={removerUltimaSilaba}
-                variant="outline"
-                className="px-6 py-4 text-lg border-2 border-red-400 text-red-600 hover:bg-red-100 rounded-xl bg-transparent"
-              >
-                <X className="w-5 h-5 mr-2" />
-                Remover Última Sílaba
-              </Button>
-            )}
+            <div className="flex justify-center gap-4 flex-wrap">
+              {silabasSelecionadas.length > 0 && (
+                <Button
+                  onClick={removerUltimaSilaba}
+                  variant="outline"
+                  className="px-6 py-4 text-lg border-2 border-red-400 text-red-600 hover:bg-red-100 rounded-xl bg-transparent"
+                >
+                  <X className="w-5 h-5 mr-2" />
+                  Remover Última
+                </Button>
+              )}
 
-            {/* Sílabas disponíveis */}
+              {silabasSelecionadas.length > 0 && (
+                <Button
+                  onClick={verificarExercicio}
+                  className="px-8 py-4 text-lg bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-xl shadow-lg transform hover:scale-110 transition-all"
+                >
+                  <Check className="w-5 h-5 mr-2" />
+                  Verificar
+                </Button>
+              )}
+            </div>
+
             <div className="flex justify-center gap-4 flex-wrap">
               {silabasEmbaralhadas.map((silaba, index) => (
                 <button
@@ -218,7 +419,6 @@ export default function AprendizadoLeitura() {
               ))}
             </div>
 
-            {/* Feedback */}
             {feedback === "correto" && (
               <div className="p-6 bg-gradient-to-r from-green-100 to-emerald-100 rounded-2xl border-4 border-green-400 animate-bounce">
                 <Check className="w-16 h-16 text-green-600 mx-auto mb-4" />
@@ -252,7 +452,7 @@ export default function AprendizadoLeitura() {
                     <span className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-green-600 to-teal-600 bg-clip-text text-transparent">
                       {silaba}
                     </span>
-                    <Volume2 className="w-6 h-6 text-green-600 mx-auto mt-2" />
+                    <Volume2 className="w-16 h-16 text-green-600 mx-auto mt-2" />
                   </button>
                 ))}
               </div>
@@ -267,7 +467,7 @@ export default function AprendizadoLeitura() {
               size="lg"
               className="px-10 py-8 text-2xl bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-2xl shadow-xl transform hover:scale-105 transition-all"
             >
-              <Volume2 className="w-10 h-10 mr-3" />
+              <Volume2 className="w-20 h-20 mr-3" />
               Ouvir a Palavra Completa
             </Button>
 
@@ -304,7 +504,7 @@ export default function AprendizadoLeitura() {
                   <span className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
                     {palavra}
                   </span>
-                  <Volume2 className="w-5 h-5 text-blue-600 mx-auto mt-2" />
+                  <Volume2 className="w-14 h-14 text-blue-600 mx-auto mt-2" />
                 </button>
               ))}
             </div>
@@ -317,7 +517,7 @@ export default function AprendizadoLeitura() {
             size="lg"
             className="px-10 py-8 text-2xl bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-2xl shadow-xl transform hover:scale-105 transition-all"
           >
-            <Volume2 className="w-10 h-10 mr-3" />
+            <Volume2 className="w-20 h-20 mr-3" />
             Ouvir a Frase Completa
           </Button>
 
@@ -356,7 +556,7 @@ export default function AprendizadoLeitura() {
             variant="outline"
             className="px-8 py-6 text-xl border-2 border-purple-500 text-purple-600 hover:bg-purple-500 hover:text-white rounded-xl bg-white transform hover:scale-105 transition-all"
           >
-            <Volume2 className="w-8 h-8 mr-3" />
+            <Volume2 className="w-18 h-18 mr-3" />
             Ouvir o Texto
           </Button>
 
@@ -409,8 +609,7 @@ export default function AprendizadoLeitura() {
 
         <Card className="p-12 shadow-2xl bg-white/95 backdrop-blur border-2 border-teal-200">{renderConteudo()}</Card>
 
-        {/* Navegação entre lições */}
-        {itemAtual === totalItens - 1 && licaoAtual < licoes.length - 1 && (
+        {itemAtual === totalItens - 1 && licaoAtual < licoes.length - 1 && modo !== "exercicio" && (
           <Card className="p-8 shadow-lg text-center bg-white/95 backdrop-blur border-2 border-green-200">
             <h3 className="text-2xl font-bold text-gray-800 mb-4">Parabéns! Você completou esta lição!</h3>
             <Button
@@ -427,25 +626,8 @@ export default function AprendizadoLeitura() {
             </Button>
           </Card>
         )}
-
-        {/* Conclusão final */}
-        {itemAtual === totalItens - 1 && licaoAtual === licoes.length - 1 && (
-          <Card className="p-8 shadow-lg text-center bg-gradient-to-r from-green-100 to-emerald-100 border-4 border-green-400">
-            <Check className="w-20 h-20 text-green-600 mx-auto mb-4" />
-            <h3 className="text-3xl font-bold text-green-700 mb-4">Parabéns! Você completou todas as lições!</h3>
-            <p className="text-xl text-gray-700 mb-6">Continue praticando para melhorar ainda mais!</p>
-            <Link href="/">
-              <Button
-                size="lg"
-                className="px-12 py-6 text-xl bg-gradient-to-r from-orange-500 to-pink-500 hover:from-orange-600 hover:to-pink-600 text-white rounded-xl shadow-lg transform hover:scale-105 transition-all"
-              >
-                <Home className="w-6 h-6 mr-2" />
-                Voltar ao Início
-              </Button>
-            </Link>
-          </Card>
-        )}
       </div>
     </div>
   )
 }
+

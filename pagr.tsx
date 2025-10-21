@@ -3,120 +3,180 @@
 import { useState, useRef, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Check, X, SkipForward } from "lucide-react"
+import { Check, X, SkipForward, Volume2 } from "lucide-react" 
 import Link from "next/link"
+
+// Define o tempo que o vídeo deve continuar rodando após a última pergunta (30s)
+const VIDEO_END_TIME = 35; 
 
 export default function AvaliacaoInicial() {
   const [etapa, setEtapa] = useState<"video" | "verificacao-nome" | "resultado">("video")
   const [respostas, setRespostas] = useState<boolean[]>([])
-  const [perguntaAtual, setPerguntaAtual] = useState(0)
+  const [perguntaAtual, setPerguntaAtual] = useState(0) // 0-4 é o índice da pergunta. 5 indica que todas foram respondidas.
   const [videoPausado, setVideoPausado] = useState(false)
+  const [videoIniciado, setVideoIniciado] = useState(false)
   const [nomeDigitado, setNomeDigitado] = useState("")
+  // NOVO ESTADO para controlar o fade dos botões
+  const [showControls, setShowControls] = useState(false) 
+  const [mostrarBotaoVerde, setMostrarBotaoVerde] = useState(false)
+  const [mostrarBotaoVermelho, setMostrarBotaoVermelho] = useState(false)
   const videoRef = useRef<HTMLVideoElement>(null)
 
-  const temposPausa = [15, 30, 45]
+  // TEMPOS DE PAUSA MANTIDOS
+  const temposPausa = [17, 21, 25, 27, 30]
 
+  // NOVAS PERGUNTAS (P2 é sobre saber escrever o nome)
   const perguntas = [
-    "Pergunta 1: Você sabe o alfabeto completo, do A ao Z?",
-    "Pergunta 2: Se eu disser um nome, como 'Mãe' ou 'Casa', você consegue identificar a primeira letra dessa palavra?",
-    "Pergunta 3: Você consegue escrever seu próprio nome sem precisar copiar de lugar nenhum?",
+    "Pergunta 1: Você conhece o alfabeto de A a Z?",
+    "Pergunta 2: Você sabe escrever seu nome sem olhar em lugar nenhum?",
+    "Pergunta 3: Você sabe o som que essas letras juntas fazem?",
+    "Pergunta 4: E essas aqui?",
+    "Pergunta 5: E se juntarmos todas elas?",
   ]
 
-  useEffect(() => {
+  const iniciarVideo = () => {
     if (videoRef.current) {
-      videoRef.current.play().catch((error) => {
-        console.log("[v0] Autoplay bloqueado pelo navegador:", error)
-      })
+      videoRef.current
+        .play()
+        .then(() => {
+          setVideoIniciado(true)
+        })
+        .catch((error) => {
+          console.log("[v0] Erro ao iniciar vídeo:", error)
+          alert("Não foi possível iniciar o vídeo. Por favor, tente novamente.")
+        })
     }
-  }, [])
+  }
+
+
+  // LÓGICA DE TRANSIÇÃO APÓS O FIM DO VÍDEO
+  const handleVideoEnd = () => {
+    if (etapa === "video") {
+      const sabeEscreverNome = respostas[1]
+
+      if (sabeEscreverNome) {
+        setEtapa("verificacao-nome")
+      } else {
+        setEtapa("resultado")
+      }
+    }
+  }
 
   useEffect(() => {
-    if (etapa === "video" && videoRef.current) {
+    if (etapa === "video" && videoRef.current && videoIniciado) {
       const video = videoRef.current
 
       const handleTimeUpdate = () => {
         const tempoAtual = video.currentTime
-        const tempoPergunta = temposPausa[perguntaAtual]
+         if (tempoAtual >= 10 && !mostrarBotaoVerde && !videoPausado) {
+          setMostrarBotaoVerde(true)
+        }
 
-        if (tempoPergunta && tempoAtual >= tempoPergunta && !videoPausado) {
-          video.pause()
-          setVideoPausado(true)
+        // Mostrar botão vermelho aos 13 segundos com fade
+        if (tempoAtual >= 13 && !mostrarBotaoVermelho && !videoPausado) {
+          setMostrarBotaoVermelho(true)
+        }
+        // 1. Lógica de pausa para as 5 perguntas (perguntaAtual: 0 a 4)
+        if (perguntaAtual < temposPausa.length) {
+          const tempoPergunta = temposPausa[perguntaAtual]
+          if (tempoPergunta && tempoAtual >= tempoPergunta && !videoPausado) {
+            video.pause()
+            setVideoPausado(true)
+            // INICIA O FADE IN
+            setTimeout(() => setShowControls(true), 50); 
+          }
+        } 
+        
+        // 2. Lógica de fim de vídeo (depois que todas as perguntas foram respondidas, perguntaAtual: 5)
+        if (perguntaAtual === temposPausa.length && tempoAtual >= VIDEO_END_TIME) {
+            video.pause()
+            handleVideoEnd()
+        }
+      }
+      
+      const handleVideoEnded = () => {
+        if (perguntaAtual === temposPausa.length) {
+            handleVideoEnd();
         }
       }
 
       video.addEventListener("timeupdate", handleTimeUpdate)
-      return () => video.removeEventListener("timeupdate", handleTimeUpdate)
+      video.addEventListener("ended", handleVideoEnded)
+      return () => {
+        video.removeEventListener("timeupdate", handleTimeUpdate)
+        video.removeEventListener("ended", handleVideoEnded)
+      }
     }
-  }, [etapa, perguntaAtual, videoPausado, temposPausa])
+  }, [etapa, perguntaAtual, videoPausado, temposPausa, videoIniciado, respostas]) 
 
+  // LÓGICA DE RESPOSTA ATUALIZADA
   const responder = (resposta: boolean) => {
     const novasRespostas = [...respostas, resposta]
     setRespostas(novasRespostas)
+    
+    // INICIA O FADE OUT DOS BOTÕES
+    setShowControls(false);
 
-    if (perguntaAtual === 2 && resposta === true) {
-      setEtapa("verificacao-nome")
-      return
-    }
+    // Espera a transição de fade (300ms) antes de liberar a pausa do vídeo
+    setTimeout(() => {
+        setVideoPausado(false);
 
-    if (perguntaAtual === 2 && resposta === false) {
-      // Avisar que não tem problema e pedir ajuda
-      falar("Não tem problema, peça ajuda para alguém para escrever o seu nome na próxima etapa")
-      setTimeout(() => {
-        setEtapa("verificacao-nome")
-      }, 5000) // Esperar 5 segundos para a mensagem ser ouvida
-      return
-    }
-
-    if (perguntaAtual < temposPausa.length - 1) {
-      setPerguntaAtual(perguntaAtual + 1)
-      setVideoPausado(false)
-      videoRef.current?.play()
-    } else {
-      setEtapa("resultado")
-    }
+        // Se ainda há perguntas a serem feitas (P1 a P4, índices 0 a 3)
+        if (perguntaAtual < temposPausa.length - 1) {
+            setPerguntaAtual(perguntaAtual + 1);
+            videoRef.current?.play();
+        } else {
+            // Última pergunta respondida (P5, índice 4).
+            // Avança o contador para '5' para que o useEffect continue a reprodução até o VIDEO_END_TIME
+            setPerguntaAtual(temposPausa.length); // Define perguntaAtual como 5
+            videoRef.current?.play(); 
+        }
+    }, 350); // 350ms para garantir que a animação de 300ms seja concluída
   }
 
-  const falar = (texto: string) => {
-    if ("speechSynthesis" in window) {
-      const utterance = new SpeechSynthesisUtterance(texto)
-      utterance.lang = "pt-BR"
-      utterance.rate = 0.6
-      utterance.pitch = 1.1
-      window.speechSynthesis.speak(utterance)
-    }
-  }
 
   const pularVideo = () => {
     window.location.href = "/alfabeto"
   }
 
+  // LÓGICA DE ROTA MANTIDA
   const calcularProximaRota = () => {
-    // Se respondeu SIM para perguntas 1 e 2 (sabe alfabeto e identifica letras)
-    if (respostas[0] === true && respostas[1] === true) {
+    const [p1_alfabeto, p2_nome, p3_som1, p4_som2, p5_somFinal] = respostas
+
+    if (p1_alfabeto && p3_som1 && p4_som2 && p5_somFinal) {
       return {
-        titulo: "Você já conhece o alfabeto!",
-        descricao: "Vamos praticar a leitura e escrita de palavras e frases.",
-        proximaRota: "/leitura",
+        titulo: "Domínio Excelente!",
+        descricao: "Seu conhecimento fonético e do alfabeto é forte! Iremos focar em textos, leitura e escrita avançada.",
+        proximaRota: "/leitura", 
       }
     }
 
-    // Se não sabe o alfabeto, começar do início
+    if (p1_alfabeto) {
+      return {
+        titulo: "Pronto para Palavras!",
+        descricao: "Você conhece o alfabeto! Vamos começar imediatamente com a formação de sílabas e leitura de palavras simples.",
+        proximaRota: "/leitura", 
+      }
+    }
+
     return {
       titulo: "Vamos começar do início!",
-      descricao: "Você vai aprender o alfabeto com atividades práticas e divertidas.",
-      proximaRota: "/alfabeto",
+      descricao: "Você vai aprender o alfabeto, o som das letras e sílabas com atividades práticas e divertidas.",
+      proximaRota: "/alfabeto", 
     }
   }
 
+  // LÓGICA DE VERIFICAR NOME SIMPLIFICADA
   const verificarNome = () => {
     if (nomeDigitado.trim().length >= 2) {
-      // Nome válido, salvar no localStorage para usar no desafio final
       localStorage.setItem("nomeAluno", nomeDigitado.trim())
       setEtapa("resultado")
     } else {
       alert("Por favor, digite seu nome completo")
     }
   }
+
+  // === RENDERIZAÇÃO DE VERIFICAÇÃO DE NOME (APÓS O VÍDEO) ===
 
   if (etapa === "verificacao-nome") {
     return (
@@ -125,10 +185,10 @@ export default function AvaliacaoInicial() {
           <div className="space-y-8">
             <div className="text-center space-y-4">
               <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent text-balance">
-                Ótimo! Vamos verificar
+                Desafio Final: Escreva Seu Nome!
               </h1>
               <p className="text-2xl md:text-3xl text-gray-700 text-balance">
-                Por favor, escreva seu nome completo abaixo:
+                Você respondeu que sabe escrever. Vamos confirmar para personalizar seu aprendizado:
               </p>
             </div>
 
@@ -148,12 +208,14 @@ export default function AvaliacaoInicial() {
                 className="w-full py-10 text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-2xl shadow-lg transform hover:scale-105 transition-all"
               >
                 <Check className="w-10 h-10 mr-3" />
-                Confirmar
+                Confirmar e Ver Resultado
               </Button>
 
               <Button
                 onClick={() => {
-                  setRespostas([...respostas.slice(0, 2), false])
+                  const respostasAjustadas = [...respostas]
+                  respostasAjustadas[1] = false 
+                  setRespostas(respostasAjustadas)
                   setEtapa("resultado")
                 }}
                 variant="outline"
@@ -169,8 +231,10 @@ export default function AvaliacaoInicial() {
     )
   }
 
+  // === RENDERIZAÇÃO DE VÍDEO ===
+
   if (etapa === "video") {
-    const progresso = ((perguntaAtual + 1) / temposPausa.length) * 100
+    const progresso = ((perguntaAtual) / temposPausa.length) * 100 
 
     return (
       <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-blue-400 via-purple-400 to-pink-400">
@@ -180,7 +244,9 @@ export default function AvaliacaoInicial() {
               <div className="space-y-3 flex-1">
                 <div className="flex justify-between items-center">
                   <span className="text-xl font-semibold text-purple-700">
-                    Pergunta {perguntaAtual + 1} de {temposPausa.length}
+                    {perguntaAtual < temposPausa.length ? 
+                      `Pergunta ${perguntaAtual + 1} de ${temposPausa.length}` : 
+                      "Avaliação Concluída"}
                   </span>
                   <span className="text-xl font-semibold text-blue-600">{Math.round(progresso)}%</span>
                 </div>
@@ -198,30 +264,48 @@ export default function AvaliacaoInicial() {
                 className="ml-6 px-6 py-6 text-lg font-semibold border-2 border-orange-500 text-orange-600 hover:bg-orange-500 hover:text-white transition-colors bg-white"
               >
                 <SkipForward className="w-6 h-6 mr-2" />
-                Pular Vídeo
+                Pular Avaliação
               </Button>
             </div>
 
             <div className="bg-gradient-to-br from-gray-900 to-gray-800 rounded-2xl overflow-hidden aspect-video relative shadow-xl">
-              <video ref={videoRef} className="w-full h-full object-cover" controls={false} playsInline autoPlay muted>
-                <source
-                  src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                  type="video/mp4"
-                />
+              <video ref={videoRef} className="w-full h-full object-cover" controls={false} playsInline muted={false}>
+                <source src="/video-avaliacao.mp4" type="video/mp4" />
+                <source src="/video-avaliacao.webm" type="video/webm" />
+                <source src="/video-avaliacao.mov" type="video/quicktime" />
+
                 <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
-                  <div className="text-center space-y-4">
+                  <div className="text-center space-y-4 p-8">
                     <div className="w-24 h-24 mx-auto bg-blue-500/20 rounded-full flex items-center justify-center">
                       <div className="w-12 h-12 text-blue-400 text-4xl">▶</div>
                     </div>
-                    <p className="text-white text-xl">Vídeo de avaliação</p>
-                    <p className="text-white/70 text-sm">O vídeo pausará automaticamente após cada pergunta</p>
+                    <p className="text-white text-xl font-semibold">Vídeo de Avaliação</p>
+                    <p className="text-white/70 text-sm max-w-md">
+                      O vídeo pausará automaticamente após cada pergunta para você responder
+                    </p>
                   </div>
                 </div>
               </video>
+
+              {!videoIniciado && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+                  <Button
+                    onClick={iniciarVideo}
+                    size="lg"
+                    className="px-16 py-12 text-3xl md:text-4xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-3xl shadow-2xl transform hover:scale-105 transition-all animate-pulse"
+                  >
+                    <Volume2 className="size-10 mr-4" />
+                    INICIAR AVALIAÇÃO
+                  </Button>
+                </div>
+              )}
             </div>
 
+            {/* APLICAÇÃO DO EFEITO FADE: Usando showControls e videoPausado */}
             {videoPausado && (
-              <div className="space-y-4">
+              <div 
+                className={`space-y-4 transition-opacity duration-300 ease-in-out ${showControls ? 'opacity-100' : 'opacity-0'}`}
+              >
                 <p className="text-center text-xl md:text-2xl font-semibold text-gray-800 text-balance">
                   {perguntas[perguntaAtual]}
                 </p>
@@ -231,7 +315,7 @@ export default function AvaliacaoInicial() {
                     size="lg"
                     className="py-12 text-2xl md:text-3xl font-bold bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white rounded-2xl shadow-lg group transform hover:scale-105 transition-all"
                   >
-                    <Check className="w-12 h-12 mr-4 group-hover:scale-110 transition-transform" />
+                    <Check className="size-12 mr-4 group-hover:scale-110 transition-transform" />
                     SIM
                   </Button>
                   <Button
@@ -239,16 +323,21 @@ export default function AvaliacaoInicial() {
                     size="lg"
                     className="py-12 text-2xl md:text-3xl font-bold bg-gradient-to-r from-red-500 to-rose-500 hover:from-red-600 hover:to-rose-600 text-white rounded-2xl shadow-lg group transform hover:scale-105 transition-all"
                   >
-                    <X className="w-12 h-12 mr-4 group-hover:scale-110 transition-transform" />
+                    <X className="size-12 mr-4 group-hover:scale-110 transition-transform" />
                     NÃO
                   </Button>
                 </div>
               </div>
             )}
 
-            {!videoPausado && (
+            {!videoPausado && videoIniciado && (
               <div className="text-center">
-                <p className="text-xl text-purple-700 animate-pulse font-semibold">Assista com atenção...</p>
+                <p className="text-xl text-purple-700 animate-pulse font-semibold">
+                  {perguntaAtual < temposPausa.length ? 
+                    "Assista com atenção..." : 
+                    "Avaliação concluída! Aguarde o redirecionamento..."
+                  }
+                </p>
               </div>
             )}
           </div>
@@ -256,6 +345,8 @@ export default function AvaliacaoInicial() {
       </div>
     )
   }
+
+  // === RENDERIZAÇÃO DE RESULTADO FINAL ===
 
   const resultado = calcularProximaRota()
 
